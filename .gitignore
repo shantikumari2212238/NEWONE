@@ -1,0 +1,12 @@
+node_modules/ 
+.env 
+uploads/ 
+ios/Pods/ 
+ios/build/ 
+android/.gradle/ 
+android/app/build/ 
+dist/ 
+build/ 
+.vscode/ 
+.DS_Store 
+Thumbs.db 

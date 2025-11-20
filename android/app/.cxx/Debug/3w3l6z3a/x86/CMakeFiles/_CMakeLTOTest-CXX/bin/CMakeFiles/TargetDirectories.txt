@@ -1,0 +1,4 @@
+C:/Users/HP/fyp/android/app/.cxx/Debug/3w3l6z3a/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+C:/Users/HP/fyp/android/app/.cxx/Debug/3w3l6z3a/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+C:/Users/HP/fyp/android/app/.cxx/Debug/3w3l6z3a/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+C:/Users/HP/fyp/android/app/.cxx/Debug/3w3l6z3a/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir
