@@ -55,14 +55,26 @@ router.post("/signup", upload.single("photo"), async (req, res) => {
   }
 });
 
-// POST /api/drivers/login (login by username)
+// POST /api/drivers/login (login by username or nic)
+// Defensive: if req.body is missing, returns 400 instead of crashing
 router.post("/login", async (req, res) => {
   try {
-    const { username: rawUsername, password } = req.body;
-    if (!rawUsername || !password) return res.status(400).json({ message: "All fields are required" });
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ message: "Request body is empty or not parsed. Ensure Content-Type: application/json and a JSON body is sent." });
+    }
 
-    const username = String(rawUsername).trim();
-    const driver = await Driver.findOne({ username });
+    const usernameOrNic = (req.body.username || req.body.nic || "").toString().trim();
+    const password = req.body.password;
+
+    if (!usernameOrNic || !password) {
+      return res.status(400).json({ message: "All fields are required: username (or nic) and password" });
+    }
+
+    // try find by username first, then nic
+    let driver = await Driver.findOne({ username: usernameOrNic });
+    if (!driver) {
+      driver = await Driver.findOne({ nic: usernameOrNic });
+    }
     if (!driver) return res.status(401).json({ message: "Invalid username or password" });
 
     const match = await bcrypt.compare(password, driver.password);
@@ -70,12 +82,13 @@ router.post("/login", async (req, res) => {
 
     if (driver.status !== "approved") return res.status(403).json({ message: "Your account is pending admin approval." });
 
+    // Use JWT_SECRET if present; otherwise fallback (useful for dev/testing only)
+    const secret = process.env.JWT_SECRET || process.env.FALLBACK_JWT || "dev_temporary_secret_change_me";
     if (!process.env.JWT_SECRET) {
-      console.error("❌ Missing JWT_SECRET");
-      return res.status(500).json({ message: "Server misconfiguration" });
+      console.warn("⚠️ JWT_SECRET is not set. Using fallback secret — PLEASE set JWT_SECRET in production (Render environment variables).");
     }
 
-    const token = jwt.sign({ id: driver._id.toString(), role: "driver" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: driver._id.toString(), role: "driver" }, secret, { expiresIn: "7d" });
 
     return res.json({
       message: "Login successful",

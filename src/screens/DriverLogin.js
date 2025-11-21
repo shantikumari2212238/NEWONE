@@ -1,15 +1,7 @@
 // src/screens/DriverLogin.js
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Image,
-  ScrollView,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, ScrollView,
 } from "react-native";
 import { saveToken, saveUser } from "../utils/auth";
 
@@ -20,6 +12,23 @@ const DriverLogin = ({ navigation }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const postLogin = async (payload) => {
+    try {
+      const resp = await fetch(BACKEND_LOGIN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await resp.json().catch(() => null);
+      console.log("[DriverLogin] POST", payload, "=>", resp.status, json);
+      return { resp, json };
+    } catch (err) {
+      console.error("[DriverLogin] network error:", err);
+      Alert.alert("Network Error", "Could not reach server. Check connection and backend logs.");
+      return { resp: null, json: null };
+    }
+  };
+
   const handleLogin = async () => {
     if (!username.trim() || !password) {
       Alert.alert("Validation", "Please enter username and password.");
@@ -28,36 +37,45 @@ const DriverLogin = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const resp = await fetch(BACKEND_LOGIN, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
-      });
+      // First attempt: send as { username, password }
+      let { resp, json } = await postLogin({ username: username.trim(), password });
 
-      const json = await resp.json().catch(() => null);
-      setLoading(false);
+      // If we got a response but no token and status is 401, try fallback with nic field
+      if (resp && resp.status === 401) {
+        console.log("[DriverLogin] trying fallback with nic field...");
+        const alt = await postLogin({ nic: username.trim(), password });
+        resp = alt.resp;
+        json = alt.json;
+      }
+
+      if (!resp) {
+        // already alerted in postLogin; stop
+        return;
+      }
 
       if (resp.ok && json) {
-        // save token and user
-        if (json.token) {
-          const ok = await saveToken(json.token);
-          if (!ok) {
-            Alert.alert("Warning", "Logged in but could not save session locally.");
-          }
+        if (!json.token) {
+          console.warn("Server responded OK but token missing:", json);
+          Alert.alert("Login Failed", "Server did not return a token. Check backend.");
+          return;
         }
-        if (json.driver) {
-          await saveUser(json.driver);
-        }
-
+        await saveToken(json.token);
+        if (json.driver) await saveUser(json.driver);
         navigation.replace("DriverHome", { driver: json.driver });
       } else {
-        const msg = json?.message || "Login failed";
-        Alert.alert("Login Failed", msg);
+        // explicit handling
+        if (resp.status === 401) {
+          Alert.alert("Login Failed", json?.message || "Invalid username or password.");
+        } else if (resp.status === 403) {
+          Alert.alert("Account Pending", json?.message || "Your account is pending admin approval.");
+        } else if (resp.status >= 500) {
+          Alert.alert("Server Error", json?.message || "Server error during login. Check backend logs.");
+        } else {
+          Alert.alert("Login Failed", json?.message || `Unexpected response (${resp.status}).`);
+        }
       }
-    } catch (err) {
+    } finally {
       setLoading(false);
-      console.error("❌ Login network error:", err);
-      Alert.alert("Network Error", "Could not reach server. Check your connection.");
     }
   };
 
@@ -69,25 +87,11 @@ const DriverLogin = ({ navigation }) => {
 
       <View style={styles.form}>
         <Text style={styles.label}>Username</Text>
-        <TextInput
-          style={styles.input}
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="your username"
-          placeholderTextColor="#a68bc6"
-        />
-
+        <TextInput style={styles.input} value={username} onChangeText={setUsername} autoCapitalize="none"
+          autoCorrect={false} placeholder="your username or NIC" placeholderTextColor="#a68bc6" />
         <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="Enter password"
-          placeholderTextColor="#a68bc6"
-        />
+        <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry
+          placeholder="Enter password" placeholderTextColor="#a68bc6" />
 
         <TouchableOpacity style={styles.submitButton} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Sign In</Text>}
@@ -113,17 +117,7 @@ const styles = StyleSheet.create({
   subtitle: { color: "#6A1B9A", fontSize: 13, marginTop: 6, marginBottom: 12, textAlign: "center" },
   form: { width: "100%", marginTop: 6 },
   label: { color: "#6A1B9A", fontSize: 13, marginLeft: 4, fontWeight: "600" },
-  input: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    color: "#333",
-    borderWidth: 1,
-    borderColor: "#ead9ff",
-    marginTop: 6,
-  },
+  input: { backgroundColor: "#fff", borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, fontSize: 16, color: "#333", borderWidth: 1, borderColor: "#ead9ff", marginTop: 6 },
   submitButton: { backgroundColor: "#6A1B9A", paddingVertical: 14, borderRadius: 30, marginTop: 20, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 14 },
