@@ -1,6 +1,9 @@
 D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/CMakeFiles/appmodules.dir
 D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/CMakeFiles/edit_cache.dir
 D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/CMakeFiles/rebuild_cache.dir
+D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/rnasyncstorage_autolinked_build/CMakeFiles/react_codegen_rnasyncstorage.dir
+D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/rnasyncstorage_autolinked_build/CMakeFiles/edit_cache.dir
+D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/rnasyncstorage_autolinked_build/CMakeFiles/rebuild_cache.dir
 D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/rngesturehandler_codegen_autolinked_build/CMakeFiles/react_codegen_rngesturehandler_codegen.dir
 D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/rngesturehandler_codegen_autolinked_build/CMakeFiles/edit_cache.dir
 D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/x86/rngesturehandler_codegen_autolinked_build/CMakeFiles/rebuild_cache.dir

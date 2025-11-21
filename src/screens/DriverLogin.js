@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
-  Platform,
 } from "react-native";
+import { saveToken, saveUser } from "../utils/auth";
 
 const BACKEND_LOGIN = "https://rydy-backend.onrender.com/api/drivers/login";
 
 const DriverLogin = ({ navigation }) => {
-  const [username, setUsername] = useState(""); // username (or NIC if you want)
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,25 +30,28 @@ const DriverLogin = ({ navigation }) => {
     try {
       const resp = await fetch(BACKEND_LOGIN, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: username.trim(), // backend expects 'username' per your request
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
-      const json = await resp.json();
+      const json = await resp.json().catch(() => null);
       setLoading(false);
 
-      if (resp.ok) {
-        // Successful login. Navigate to DriverHome (change route name if different)
-        // Pass driver object to next screen for immediate access
+      if (resp.ok && json) {
+        // save token and user
+        if (json.token) {
+          const ok = await saveToken(json.token);
+          if (!ok) {
+            Alert.alert("Warning", "Logged in but could not save session locally.");
+          }
+        }
+        if (json.driver) {
+          await saveUser(json.driver);
+        }
+
         navigation.replace("DriverHome", { driver: json.driver });
       } else {
-        // Backend returns helpful messages like "Invalid credentials" or "pending"
-        const msg = json.message || "Login failed";
+        const msg = json?.message || "Login failed";
         Alert.alert("Login Failed", msg);
       }
     } catch (err) {
@@ -57,8 +60,6 @@ const DriverLogin = ({ navigation }) => {
       Alert.alert("Network Error", "Could not reach server. Check your connection.");
     }
   };
-
-  const goToSignup = () => navigation.navigate("DriverSignup");
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -74,7 +75,7 @@ const DriverLogin = ({ navigation }) => {
           onChangeText={setUsername}
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="your username or NIC"
+          placeholder="your username"
           placeholderTextColor="#a68bc6"
         />
 
@@ -94,7 +95,7 @@ const DriverLogin = ({ navigation }) => {
 
         <View style={styles.row}>
           <Text style={styles.small}>Don't have an account?</Text>
-          <TouchableOpacity onPress={goToSignup}>
+          <TouchableOpacity onPress={() => navigation.navigate("DriverSignup")}>
             <Text style={styles.link}> Sign up</Text>
           </TouchableOpacity>
         </View>
@@ -106,14 +107,7 @@ const DriverLogin = ({ navigation }) => {
 export default DriverLogin;
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 30,
-    paddingBottom: 40,
-    backgroundColor: "#f7f0ff",
-    minHeight: "100%",
-  },
+  container: { alignItems: "center", paddingHorizontal: 24, paddingTop: 30, paddingBottom: 40, backgroundColor: "#f7f0ff", minHeight: "100%" },
   logo: { width: 120, height: 120, marginBottom: 8 },
   title: { color: "#6A1B9A", fontSize: 24, fontWeight: "800", marginTop: 6 },
   subtitle: { color: "#6A1B9A", fontSize: 13, marginTop: 6, marginBottom: 12, textAlign: "center" },
@@ -130,13 +124,7 @@ const styles = StyleSheet.create({
     borderColor: "#ead9ff",
     marginTop: 6,
   },
-  submitButton: {
-    backgroundColor: "#6A1B9A",
-    paddingVertical: 14,
-    borderRadius: 30,
-    marginTop: 20,
-    alignItems: "center",
-  },
+  submitButton: { backgroundColor: "#6A1B9A", paddingVertical: 14, borderRadius: 30, marginTop: 20, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 14 },
   small: { color: "#6A1B9A", fontSize: 13 },

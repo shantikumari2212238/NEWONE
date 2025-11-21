@@ -1,13 +1,15 @@
+// backend/routes/studentRoutes.js
 import express from "express";
 import multer from "multer";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import path from "path";
 import { fileURLToPath } from "url";
 import Student from "../models/Student.js";
 
 const router = express.Router();
 
-// Path fix for ESM
+// ESM path fix
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -21,25 +23,29 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-/* ---------------------------
-   Signup - POST /api/students/signup
-   --------------------------- */
+/**
+ * POST /api/students/signup
+ * Save student with status "pending" and id card image
+ */
 router.post("/signup", upload.single("idCard"), async (req, res) => {
   try {
     const { name, universityId: rawId, universityName, password } = req.body;
 
-    if (!name || !rawId || !universityName || !password)
+    if (!name || !rawId || !universityName || !password) {
       return res.status(400).json({ message: "All fields are required" });
-    if (!req.file)
+    }
+
+    if (!req.file) {
       return res.status(400).json({ message: "ID card image is required" });
+    }
 
     const universityId = rawId.trim().toUpperCase();
 
-    // Check if ID already exists
-    const existing = await Student.findOne({ universityId });
-    if (existing)
-      return res.status(400).json({ message: "University ID already exists" });
+    // Check uniqueness
+    const existing = await Student.findOne({ universityId }).lean();
+    if (existing) return res.status(400).json({ message: "University ID already exists" });
 
+    // Hash password
     const hashed = await bcrypt.hash(password, 10);
 
     const student = new Student({
@@ -48,79 +54,105 @@ router.post("/signup", upload.single("idCard"), async (req, res) => {
       universityName: universityName.trim(),
       password: hashed,
       idCardImage: req.file.path,
+      status: "pending",
     });
 
     await student.save();
-    return res
-      .status(201)
-      .json({ message: "Signup successful, waiting for admin approval." });
+
+    return res.status(201).json({ message: "Signup successful, waiting for admin approval." });
   } catch (err) {
     console.error("❌ Signup Error:", err);
-    if (err.code === 11000)
-      return res
-        .status(400)
-        .json({ message: "Duplicate University ID detected" });
-    res.status(500).json({ message: "Server error during signup." });
+    if (err.code === 11000) return res.status(400).json({ message: "Duplicate University ID detected" });
+    return res.status(500).json({ message: "Server error during signup." });
   }
 });
 
-/* ---------------------------
-   Login - POST /api/students/login
-   --------------------------- */
+/**
+ * POST /api/students/login
+ * Returns JWT + minimal student info if approved
+ */
 router.post("/login", async (req, res) => {
   try {
     const { universityId: rawId, password } = req.body;
-    if (!rawId || !password)
-      return res.status(400).json({ message: "All fields are required" });
+    if (!rawId || !password) return res.status(400).json({ message: "All fields are required" });
 
-    const universityId = rawId.trim().toUpperCase();
+    const universityId = String(rawId).trim().toUpperCase();
     const student = await Student.findOne({ universityId });
-    if (!student) return res.status(404).json({ message: "Student not found" });
+    if (!student) return res.status(401).json({ message: "Invalid credentials" });
 
     const match = await bcrypt.compare(password, student.password);
-    if (!match)
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
-    if (student.status !== "approved")
-      return res
-        .status(403)
-        .json({ message: "Your account is pending admin approval." });
+    if (student.status !== "approved") {
+      return res.status(403).json({ message: "Your account is pending admin approval." });
+    }
 
-    res.json({
-      message: "Login successful!",
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ Missing JWT_SECRET in environment");
+      return res.status(500).json({ message: "Server misconfiguration" });
+    }
+
+    const token = jwt.sign({ id: student._id.toString(), role: "student" }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return res.json({
+      message: "Login successful",
+      token,
       student: {
         id: student._id,
         name: student.name,
+        universityId: student.universityId,
         universityName: student.universityName,
       },
     });
   } catch (err) {
     console.error("❌ Login error:", err);
-    res.status(500).json({ message: "Server error during login." });
+    return res.status(500).json({ message: "Server error during login." });
   }
 });
 
-/* ---------------------------
-   Admin - Approve / Reject / List
-   --------------------------- */
+/* Admin endpoints (list pending/approved, approve, reject) */
 router.get("/pending", async (req, res) => {
-  const pending = await Student.find({ status: "pending" });
-  res.json(pending);
+  try {
+    const pending = await Student.find({ status: "pending" }).sort({ createdAt: -1 });
+    res.json(pending);
+  } catch (err) {
+    console.error("❌ Fetch pending students error:", err);
+    res.status(500).json({ message: "Failed to fetch pending students" });
+  }
 });
 
 router.get("/approved", async (req, res) => {
-  const approved = await Student.find({ status: "approved" });
-  res.json(approved);
+  try {
+    const approved = await Student.find({ status: "approved" }).sort({ createdAt: -1 });
+    res.json(approved);
+  } catch (err) {
+    console.error("❌ Fetch approved students error:", err);
+    res.status(500).json({ message: "Failed to fetch approved students" });
+  }
 });
 
 router.patch("/approve/:id", async (req, res) => {
-  await Student.findByIdAndUpdate(req.params.id, { status: "approved" });
-  res.json({ message: "Student approved" });
+  try {
+    const s = await Student.findByIdAndUpdate(req.params.id, { status: "approved" }, { new: true });
+    if (!s) return res.status(404).json({ message: "Student not found" });
+    return res.json({ message: "Student approved", student: s });
+  } catch (err) {
+    console.error("❌ Approve student error:", err);
+    res.status(500).json({ message: "Failed to approve student" });
+  }
 });
 
 router.delete("/reject/:id", async (req, res) => {
-  await Student.findByIdAndDelete(req.params.id);
-  res.json({ message: "Student rejected and deleted" });
+  try {
+    const s = await Student.findByIdAndDelete(req.params.id);
+    if (!s) return res.status(404).json({ message: "Student not found" });
+    return res.json({ message: "Student rejected and deleted" });
+  } catch (err) {
+    console.error("❌ Reject student error:", err);
+    res.status(500).json({ message: "Failed to reject student" });
+  }
 });
 
 export default router;

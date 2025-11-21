@@ -1,10 +1,10 @@
+// backend/models/Student.js
 import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
 
-    // University ID (always uppercase + unique)
     universityId: {
       type: String,
       required: true,
@@ -21,7 +21,7 @@ const studentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Create unique index safely
+// Unique index
 studentSchema.index(
   { universityId: 1 },
   { unique: true, partialFilterExpression: { universityId: { $ne: null } } }

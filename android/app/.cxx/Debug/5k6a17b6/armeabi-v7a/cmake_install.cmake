@@ -44,6 +44,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
+  include("D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/armeabi-v7a/rnasyncstorage_autolinked_build/cmake_install.cmake")
   include("D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/armeabi-v7a/rngesturehandler_codegen_autolinked_build/cmake_install.cmake")
   include("D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/armeabi-v7a/RNImagePickerSpec_autolinked_build/cmake_install.cmake")
   include("D:/Download/Ridey-main/android/app/.cxx/Debug/5k6a17b6/armeabi-v7a/safeareacontext_autolinked_build/cmake_install.cmake")

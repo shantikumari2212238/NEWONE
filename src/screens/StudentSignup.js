@@ -1,19 +1,11 @@
 // src/screens/StudentSignup.js
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  Platform,
-  PermissionsAndroid,
+  View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator, Platform, PermissionsAndroid
 } from "react-native";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
+
+const BACKEND_URL = "https://rydy-backend.onrender.com/api/students/signup";
 
 const StudentSignup = ({ navigation }) => {
   const [name, setName] = useState("");
@@ -23,9 +15,6 @@ const StudentSignup = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [idImage, setIdImage] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // Backend signup endpoint
-  const BACKEND_URL = "https://rydy-backend.onrender.com/api/students/signup";
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== "android") return true;
@@ -44,31 +33,16 @@ const StudentSignup = ({ navigation }) => {
 
   const openCamera = async () => {
     const ok = await requestCameraPermission();
-    if (!ok) {
-      Alert.alert("Permission required", "Camera permission is required to take a photo.");
-      return;
-    }
+    if (!ok) { Alert.alert("Permission required", "Camera permission is required to take a photo."); return; }
     const result = await launchCamera({ mediaType: "photo", quality: 0.8 });
     if (result.didCancel) return;
-    if (result.errorCode) {
-      console.error("Camera error:", result.errorMessage || result.errorCode);
-      Alert.alert("Error", result.errorMessage || "Camera error");
-      return;
-    }
-    const asset = result.assets && result.assets[0];
-    if (asset?.uri) setIdImage(asset);
+    if (result.assets?.[0]) setIdImage(result.assets[0]);
   };
 
   const openGallery = async () => {
     const result = await launchImageLibrary({ mediaType: "photo", quality: 0.8 });
     if (result.didCancel) return;
-    if (result.errorCode) {
-      console.error("Gallery error:", result.errorMessage || result.errorCode);
-      Alert.alert("Error", result.errorMessage || "Gallery error");
-      return;
-    }
-    const asset = result.assets && result.assets[0];
-    if (asset?.uri) setIdImage(asset);
+    if (result.assets?.[0]) setIdImage(result.assets[0]);
   };
 
   const onChooseImage = () => {
@@ -98,7 +72,6 @@ const StudentSignup = ({ navigation }) => {
     }
 
     setLoading(true);
-
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
@@ -106,7 +79,6 @@ const StudentSignup = ({ navigation }) => {
       formData.append("universityName", universityName.trim());
       formData.append("password", password);
 
-      // ensure field name matches backend "idCard"
       const uri = Platform.OS === "android" ? idImage.uri : idImage.uri.replace("file://", "");
       formData.append("idCard", {
         uri,
@@ -114,13 +86,8 @@ const StudentSignup = ({ navigation }) => {
         type: idImage.type || "image/jpeg",
       });
 
-      const response = await fetch(BACKEND_URL, {
-        method: "POST",
-        body: formData,
-        // don't set Content-Type: browser/react-native will set multipart boundary
-      });
-
-      const json = await response.json();
+      const response = await fetch(BACKEND_URL, { method: "POST", body: formData });
+      const json = await response.json().catch(() => null);
       setLoading(false);
 
       if (response.ok) {
@@ -128,12 +95,8 @@ const StudentSignup = ({ navigation }) => {
           { text: "OK", onPress: () => navigation.navigate("StudentLogin") },
         ]);
       } else {
-        const msg = json.message || "Something went wrong.";
-        if (msg.includes("University ID")) {
-          Alert.alert("Duplicate ID", msg);
-        } else {
-          Alert.alert("Signup Failed", msg);
-        }
+        const msg = (json && json.message) || "Something went wrong.";
+        Alert.alert("Signup Failed", msg);
       }
     } catch (err) {
       setLoading(false);
@@ -153,13 +116,7 @@ const StudentSignup = ({ navigation }) => {
         <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="John Doe" />
 
         <Text style={[styles.label, { marginTop: 12 }]}>University ID</Text>
-        <TextInput
-          style={styles.input}
-          value={universityId}
-          onChangeText={setUniversityId}
-          placeholder="2021-ABC-123"
-          autoCapitalize="characters"
-        />
+        <TextInput style={styles.input} value={universityId} onChangeText={setUniversityId} placeholder="2021-ABC-123" autoCapitalize="characters" />
 
         <Text style={[styles.label, { marginTop: 12 }]}>University Name</Text>
         <TextInput style={styles.input} value={universityName} onChangeText={setUniversityName} placeholder="Your University Name" />
@@ -172,11 +129,7 @@ const StudentSignup = ({ navigation }) => {
 
         <Text style={[styles.label, { marginTop: 12 }]}>ID Card Picture</Text>
         <TouchableOpacity style={styles.uploadBox} onPress={onChooseImage}>
-          {idImage ? (
-            <Image source={{ uri: idImage.uri }} style={styles.idPreview} resizeMode="cover" />
-          ) : (
-            <Text style={styles.uploadText}>Tap to upload ID card (front)</Text>
-          )}
+          {idImage ? <Image source={{ uri: idImage.uri }} style={styles.idPreview} resizeMode="cover" /> : <Text style={styles.uploadText}>Tap to upload ID card (front)</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.submitButton} onPress={validateAndSubmit} disabled={loading}>
@@ -194,50 +147,17 @@ const StudentSignup = ({ navigation }) => {
 export default StudentSignup;
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    backgroundColor: "#f7f0ff",
-  },
+  container: { alignItems: "center", paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40, backgroundColor: "#f7f0ff" },
   logo: { width: 140, height: 140, marginTop: 8, marginBottom: 6 },
   title: { color: "#6A1B9A", fontSize: 24, fontWeight: "800", marginTop: 6 },
   subtitle: { color: "#6A1B9A", fontSize: 13, marginTop: 6, marginBottom: 12, textAlign: "center" },
   form: { width: "100%", marginTop: 6 },
   label: { color: "#6A1B9A", fontSize: 13, marginLeft: 4, fontWeight: "600" },
-  input: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    color: "#333",
-    borderWidth: 1,
-    borderColor: "#ead9ff",
-    marginTop: 6,
-  },
-  uploadBox: {
-    height: 150,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "#d7bff5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    overflow: "hidden",
-    backgroundColor: "#fff",
-  },
+  input: { backgroundColor: "#fff", borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, fontSize: 16, color: "#333", borderWidth: 1, borderColor: "#ead9ff", marginTop: 6 },
+  uploadBox: { height: 150, borderRadius: 12, borderWidth: 1, borderStyle: "dashed", borderColor: "#d7bff5", alignItems: "center", justifyContent: "center", marginTop: 8, overflow: "hidden", backgroundColor: "#fff" },
   uploadText: { color: "#6A1B9A", textAlign: "center", paddingHorizontal: 8 },
   idPreview: { width: "100%", height: "100%" },
-  submitButton: {
-    backgroundColor: "#6A1B9A",
-    paddingVertical: 14,
-    borderRadius: 30,
-    marginTop: 20,
-    alignItems: "center",
-  },
+  submitButton: { backgroundColor: "#6A1B9A", paddingVertical: 14, borderRadius: 30, marginTop: 20, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   noteRow: { marginTop: 12, alignItems: "center" },
   noteText: { color: "#6A1B9A", fontSize: 12, textAlign: "center" },

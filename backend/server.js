@@ -8,31 +8,30 @@ import mongoose from "mongoose";
 
 import studentRoutes from "./routes/studentRoutes.js";
 import driverRoutes from "./routes/driverRoutes.js";
+import rideRoutes from "./routes/rideRoutes.js"; // <-- ensure this file exists (we added earlier)
 
 dotenv.config();
 
 const app = express();
 
-// ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middlewares
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files (make sure uploads/ exists)
+// serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // API routes
 app.use("/api/students", studentRoutes);
-app.use("/api/drivers", driverRoutes);
+app.use("/api/drivers", driverRoutes);   // driver routes (signup/login/approve...)
+app.use("/api/rides", rideRoutes);       // ride routes (create/list/update/delete)
 
-// health
+// basic root route
 app.get("/", (req, res) => res.json({ message: "Rydy backend running" }));
 
-// Connect to Mongo and start server
 const PORT = Number(process.env.PORT || 10000);
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -46,7 +45,6 @@ mongoose
   .then(async () => {
     console.log("✅ MongoDB connected");
 
-    // Ensure index on universityId and email (unique where present)
     try {
       const coll = mongoose.connection.db.collection("students");
       await coll.createIndex(
@@ -71,7 +69,6 @@ mongoose
     process.exit(1);
   });
 
-// graceful shutdown (optional)
 process.on("SIGINT", async () => {
   console.log("\nShutting down...");
   await mongoose.disconnect();

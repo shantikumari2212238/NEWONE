@@ -1,5 +1,6 @@
 {
   "buildFiles": [
+    "D:\\Download\\Ridey-main\\node_modules\\@react-native-async-storage\\async-storage\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "D:\\Download\\Ridey-main\\node_modules\\react-native-gesture-handler\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "D:\\Download\\Ridey-main\\node_modules\\react-native-image-picker\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "D:\\Download\\Ridey-main\\node_modules\\react-native-safe-area-context\\android\\src\\main\\jni\\CMakeLists.txt",
@@ -68,6 +69,11 @@
         "C:\\Users\\HP\\.gradle\\caches\\9.0.0\\transforms\\ea12ac1f332b31fb5e1a55c985795b89\\transformed\\react-android-0.82.0-debug\\prefab\\modules\\jsi\\libs\\android.x86\\libjsi.so",
         "C:\\Users\\HP\\.gradle\\caches\\9.0.0\\transforms\\ea12ac1f332b31fb5e1a55c985795b89\\transformed\\react-android-0.82.0-debug\\prefab\\modules\\reactnative\\libs\\android.x86\\libreactnative.so"
       ]
+    },
+    "react_codegen_rnasyncstorage::@1596841e19ec5b9eeffe": {
+      "artifactName": "react_codegen_rnasyncstorage",
+      "abi": "x86",
+      "runtimeFiles": []
     }
   }
 }
